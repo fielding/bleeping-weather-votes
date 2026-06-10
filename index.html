@@ -270,13 +270,13 @@ function renderBuckets() {
     div.className = 'bucket' + (bucketFilter === b ? ' active' : '');
     div.innerHTML = '<span>' + b + '</span><span class="' + (rated === items.length ? 'done' : '') + '">' +
       rated + '/' + items.length + '</span>';
-    div.onclick = () => { bucketFilter = b; idx = 0; render(); };
+    div.onclick = () => { bucketFilter = b; idx = 0; visitHistory = []; render(); };
     el.appendChild(div);
   }
   document.querySelector('[data-bucket="__all__"]').className =
     'bucket' + (bucketFilter === '__all__' ? ' active' : '');
   document.querySelector('[data-bucket="__all__"]').onclick =
-    () => { bucketFilter = '__all__'; idx = 0; render(); };
+    () => { bucketFilter = '__all__'; visitHistory = []; idx = randomUnratedIdx(phrases) ?? 0; render(); };
 }
 
 let lastRate = 0;
@@ -293,11 +293,25 @@ function rate(v) {
   if (v) nextUnrated(); else render();
 }
 
+let visitHistory = [];
+function randomUnratedIdx(list) {
+  const unrated = list.map((p, i) => verdicts[p.id] ? -1 : i).filter(i => i >= 0 && i !== idx);
+  return unrated.length ? unrated[Math.floor(Math.random() * unrated.length)] : null;
+}
+
 function nextUnrated() {
   const list = visible();
+  // all-buckets view hops randomly so voters spread across the pool;
+  // a specific bucket walks in order
+  if (bucketFilter === '__all__') {
+    const j = randomUnratedIdx(list);
+    if (j !== null) { visitHistory.push(idx); idx = j; }
+    render();
+    return;
+  }
   for (let i = 1; i <= list.length; i++) {
     const j = (idx + i) % list.length;
-    if (!verdicts[list[j].id]) { idx = j; render(); return; }
+    if (!verdicts[list[j].id]) { visitHistory.push(idx); idx = j; render(); return; }
   }
   render();
 }
@@ -432,7 +446,9 @@ document.addEventListener('keydown', e => {
     case '4': case 's': rate('skip'); break;
     case 'u': rate(null); break;
     case 'j': case ' ': e.preventDefault(); nextUnrated(); break;
-    case 'k': case 'ArrowLeft': idx = Math.max(0, idx - 1); render(); break;
+    case 'k': case 'ArrowLeft':
+      idx = visitHistory.length ? visitHistory.pop() : Math.max(0, idx - 1);
+      render(); break;
     case 'ArrowRight': idx = Math.min(visible().length - 1, idx + 1); render(); break;
     case 'c': showClean = !showClean; render(); break;
   }
@@ -446,11 +462,7 @@ if (SYNC_URL) {
 }
 // land on a random unrated phrase each visit so voters spread across the
 // pool instead of everyone grinding cold/mild first
-{
-  const unrated = phrases.map((p, i) => verdicts[p.id] ? -1 : i).filter(i => i >= 0);
-  const from = unrated.length ? unrated : phrases.map((_, i) => i);
-  idx = from[Math.floor(Math.random() * from.length)];
-}
+idx = randomUnratedIdx(phrases) ?? Math.floor(Math.random() * phrases.length);
 
 renderVoter();
 render();
