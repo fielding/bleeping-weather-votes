@@ -444,6 +444,14 @@ if (SYNC_URL) {
   // manual export/import is the offline fallback; with sync on it's just clutter
   for (const b of document.querySelectorAll('#footer button')) b.style.display = 'none';
 }
+// land on a random unrated phrase each visit so voters spread across the
+// pool instead of everyone grinding cold/mild first
+{
+  const unrated = phrases.map((p, i) => verdicts[p.id] ? -1 : i).filter(i => i >= 0);
+  const from = unrated.length ? unrated : phrases.map((_, i) => i);
+  idx = from[Math.floor(Math.random() * from.length)];
+}
+
 renderVoter();
 render();
 </script>
