@@ -441,6 +441,8 @@ document.addEventListener('keydown', e => {
 if (SYNC_URL) {
   document.getElementById('doneHint').innerHTML =
     'votes sync automatically — rate as many or as few as you like, close the tab whenever';
+  // manual export/import is the offline fallback; with sync on it's just clutter
+  for (const b of document.querySelectorAll('#footer button')) b.style.display = 'none';
 }
 renderVoter();
 render();
