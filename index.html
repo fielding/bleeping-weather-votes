@@ -288,7 +288,7 @@ function rate(v) {
   if (!p) return;
   if (v) verdicts[p.id] = v; else delete verdicts[p.id];
   save();
-  if (SYNC_URL && !storage.getItem(VOTER_KEY)) voterName(false);
+  if (SYNC_URL) voterName(false); // prompts only if unnamed and not yet asked
   scheduleSync();
   if (v) nextUnrated(); else render();
 }
@@ -305,6 +305,7 @@ function nextUnrated() {
 const SYNC_URL = 'https://bleeping-weather-votes.fielding-630.workers.dev'; // empty string disables auto-sync (export-file workflow)
 const VOTER_KEY = 'bw-curation-voter';
 const CLIENT_KEY = 'bw-curation-client';
+const ASKED_KEY = 'bw-curation-asked'; // sessionStorage: don't re-nag after a cancelled prompt
 function clientId() {
   let id = storage.getItem(CLIENT_KEY);
   if (!id) {
@@ -330,8 +331,8 @@ function scheduleSync() {
 }
 async function syncNow() {
   if (!SYNC_URL || syncInFlight) return;
-  const voter = storage.getItem(VOTER_KEY);
-  if (!voter) return; // prompted on first rating; sync starts once named
+  const voter = currentVoter();
+  if (!voter) return; // prompted on first rating; sync starts once asked
   syncInFlight = true;
   syncDirty = false;
   try {
@@ -351,20 +352,34 @@ async function syncNow() {
 // best-effort flush when the tab closes mid-debounce
 window.addEventListener('pagehide', () => {
   if (!SYNC_URL || !syncDirty) return;
-  const voter = storage.getItem(VOTER_KEY);
+  const voter = currentVoter();
   if (!voter) return;
   navigator.sendBeacon(SYNC_URL + '/votes', new Blob([JSON.stringify(
     { format: 'bw-curation-votes', version: 1, voter, client: clientId(), verdicts }
   )], { type: 'application/json' }));
 });
 function voterName(forceAsk) {
-  let name = storage.getItem(VOTER_KEY) || '';
-  if (!name || forceAsk) {
-    name = (prompt('Name to attach to your votes (shows up in the tally):', name) || name || 'anonymous').trim();
-    storage.setItem(VOTER_KEY, name);
+  let name = (storage.getItem(VOTER_KEY) || '').trim();
+  if (name === 'anonymous') name = ''; // legacy cancelled-prompt value: ask again
+  let asked = false;
+  try { asked = !!sessionStorage.getItem(ASKED_KEY); } catch (e) {}
+  if ((!name && (!asked || forceAsk)) || (name && forceAsk)) {
+    const answer = (prompt('Name to attach to your votes (shows up in the tally):', name) || '').trim();
+    try { sessionStorage.setItem(ASKED_KEY, '1'); } catch (e) {}
+    if (answer) {
+      name = answer;
+      storage.setItem(VOTER_KEY, name);
+    }
     renderVoter();
   }
-  return name;
+  return name || 'anonymous'; // cancelled: vote as anonymous this session, ask again next visit
+}
+// non-prompting resolver for sync paths: empty string until the user has
+// been asked at least once this session
+function currentVoter() {
+  const name = (storage.getItem(VOTER_KEY) || '').trim();
+  if (name && name !== 'anonymous') return name;
+  try { return sessionStorage.getItem(ASKED_KEY) ? 'anonymous' : ''; } catch (e) { return 'anonymous'; }
 }
 function renderVoter() {
   const name = storage.getItem(VOTER_KEY);
