@@ -121,10 +121,11 @@
   <div id="help">
     <kbd>j</kbd>/<kbd>space</kbd> next unrated · <kbd>←</kbd><kbd>→</kbd> prev/next ·
     <kbd>c</kbd> toggle clean mode · skip = decide later · ratings auto-save to this browser<br>
-    when you're done (or bored): <b>Export my votes</b> and send the file back to Fielding
+    <span id="doneHint">when you're done (or bored): <b>Export my votes</b> and send the file back to Fielding</span>
   </div>
   <div id="footer">
     <span id="voterChip" title="Click to change" style="cursor:pointer; font-size:13px; color:var(--dim); align-self:center;"></span>
+    <span id="syncChip" style="font-size:13px; color:var(--dim); align-self:center;"></span>
     <button onclick="exportJSON('favorites')">Export favorites</button>
     <button onclick="exportJSON('verdicts')">Export my votes</button>
     <button onclick="importVerdicts()">Import votes</button>
@@ -287,6 +288,8 @@ function rate(v) {
   if (!p) return;
   if (v) verdicts[p.id] = v; else delete verdicts[p.id];
   save();
+  if (SYNC_URL && !storage.getItem(VOTER_KEY)) voterName(false);
+  scheduleSync();
   if (v) nextUnrated(); else render();
 }
 
@@ -299,7 +302,61 @@ function nextUnrated() {
   render();
 }
 
+const SYNC_URL = 'https://bleeping-weather-votes.fielding-630.workers.dev'; // empty string disables auto-sync (export-file workflow)
 const VOTER_KEY = 'bw-curation-voter';
+const CLIENT_KEY = 'bw-curation-client';
+function clientId() {
+  let id = storage.getItem(CLIENT_KEY);
+  if (!id) {
+    id = Math.random().toString(36).slice(2, 8);
+    storage.setItem(CLIENT_KEY, id);
+  }
+  return id;
+}
+
+let syncTimer = null, syncDirty = false, syncInFlight = false;
+function setSyncStatus(text, ok) {
+  const el = document.getElementById('syncChip');
+  if (!el) return;
+  el.textContent = text;
+  el.style.color = ok ? 'var(--keep)' : 'var(--dim)';
+}
+function scheduleSync() {
+  if (!SYNC_URL) return;
+  syncDirty = true;
+  setSyncStatus('syncing…', false);
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(syncNow, 1500);
+}
+async function syncNow() {
+  if (!SYNC_URL || syncInFlight) return;
+  const voter = storage.getItem(VOTER_KEY);
+  if (!voter) return; // prompted on first rating; sync starts once named
+  syncInFlight = true;
+  syncDirty = false;
+  try {
+    const res = await fetch(SYNC_URL + '/votes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ format: 'bw-curation-votes', version: 1, voter, client: clientId(), verdicts }),
+    });
+    if (!res.ok) throw new Error(res.status);
+    setSyncStatus('synced ✓', true);
+  } catch (e) {
+    setSyncStatus('offline — votes saved in this browser', false);
+  }
+  syncInFlight = false;
+  if (syncDirty) scheduleSync();
+}
+// best-effort flush when the tab closes mid-debounce
+window.addEventListener('pagehide', () => {
+  if (!SYNC_URL || !syncDirty) return;
+  const voter = storage.getItem(VOTER_KEY);
+  if (!voter) return;
+  navigator.sendBeacon(SYNC_URL + '/votes', new Blob([JSON.stringify(
+    { format: 'bw-curation-votes', version: 1, voter, client: clientId(), verdicts }
+  )], { type: 'application/json' }));
+});
 function voterName(forceAsk) {
   let name = storage.getItem(VOTER_KEY) || '';
   if (!name || forceAsk) {
@@ -344,7 +401,7 @@ function importVerdicts() {
         ? Object.fromEntries(data.map(p => [p.id, p.verdict]))
         : (data.verdicts || data);
       if (data.voter) storage.setItem(VOTER_KEY, data.voter);
-      save(); renderVoter(); render();
+      save(); scheduleSync(); renderVoter(); render();
     };
     reader.readAsText(input.files[0]);
   };
@@ -366,6 +423,11 @@ document.addEventListener('keydown', e => {
   }
 });
 
+if (SYNC_URL) {
+  document.getElementById('doneHint').innerHTML =
+    'votes sync automatically — rate as many or as few as you like, close the tab whenever';
+}
+renderVoter();
 render();
 </script>
 </body>
