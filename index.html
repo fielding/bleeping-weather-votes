@@ -156,6 +156,39 @@
     padding: 10px 12px; max-width: 52vw;
   }
 
+  /* ——— first-visit welcome: explains the page to cold-link arrivals ——— */
+  #welcome {
+    position: fixed; inset: 0; z-index: 50;
+    background: oklch(22% 0.012 280 / 0.48);
+    display: flex; align-items: center; justify-content: center;
+    padding: 18px;
+  }
+  #welcome[hidden] { display: none; }
+  #welcomeCard {
+    background: var(--paper); border: 2px solid var(--ink);
+    box-shadow: 10px 10px 0 var(--ink);
+    max-width: 470px; width: 100%; max-height: 92vh; overflow-y: auto;
+    padding: 24px 26px 22px;
+  }
+  #welcomeCard h2 {
+    margin: 16px 0 10px;
+    font: 900 24px/1.15 var(--disp); letter-spacing: -0.01em; color: var(--ink);
+  }
+  #welcomeCard h2 .gx { font: 400 19px/1 "Bungee", var(--mono); color: var(--accent); }
+  #welcomeCard p { margin: 0 0 12px; font: 400 13.5px/1.65 var(--mono); color: var(--soft); }
+  #welcomeCard p b { color: var(--ink); }
+  #welcomeName {
+    width: 100%; margin: 2px 0 5px;
+    font: 700 15px/1.2 var(--mono); color: var(--ink);
+    background: transparent; border: 1px solid var(--ink); border-radius: 0;
+    padding: 11px 12px;
+  }
+  #welcomeName:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  #welcomeCard .field-note { font-size: 11.5px; color: var(--dim); margin-bottom: 14px; }
+  #welcomeGo { width: 100%; padding: 13px 16px 12px; font-size: 14px; }
+  #welcomeSite { display: block; margin-top: 12px; font: 400 11.5px/1.5 var(--mono); color: var(--dim); text-align: center; }
+  #welcomeSite a { color: var(--accent); }
+
   /* ——— mobile: the sidebar becomes a top bar, the page scrolls ——— */
   @media (max-width: 720px) {
     body { display: block; height: auto; overflow: auto; }
@@ -174,6 +207,7 @@
     #main { padding: 18px 16px 48px; overflow: visible; }
     #stage { gap: 16px; }
     #widget { width: 100%; height: auto; min-height: 218px; aspect-ratio: 530 / 250; padding: 18px; }
+    .fig-cap { width: 100%; }
     #phrase { font-size: clamp(19px, 5.8vw, 26px); }
     #temp { font-size: 34px; }
     #icon { width: 48px; height: 48px; }
@@ -241,6 +275,30 @@
     <button onclick="exportJSON('verdicts')">Export my votes</button>
     <button onclick="importVerdicts()">Import votes</button>
     <input type="file" id="importFile" style="display:none" accept=".json">
+  </div>
+</div>
+<div id="welcome" hidden>
+  <div id="welcomeCard" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle">
+    <a class="logomark" href="https://bleepingweather.com/" aria-label="Bleeping Weather">
+      <span class="logo-grawlix" aria-hidden="true">#$@%&amp;!</span>
+      <span class="logo-weather" aria-hidden="true">WEATHER</span>
+    </a>
+    <h2 id="welcomeTitle">Vote on the <span class="gx">#$@%&amp;!</span> phrases.</h2>
+    <p><b>Bleeping Weather</b> is a weather app that swears at you — home-screen
+       widgets that report the forecast with attitude. Before launch, friends get
+       a vote on which phrases make the cut. That's you. That's this page.</p>
+    <p>Each card is a real phrase in a widget mock. Rate it:
+       <b style="color:var(--slam)">grand slam</b> = instant classic ·
+       <b style="color:var(--keep)">keep</b> = solid ·
+       <b style="color:var(--cut)">cut</b> = trash it ·
+       <b style="color:var(--skip)">skip</b> = no opinion.
+       Votes save automatically — rate ten or all <span id="welcomeCount"></span>,
+       close the tab whenever.</p>
+    <input id="welcomeName" type="text" placeholder="your name" autocomplete="off"
+           maxlength="40" aria-label="Name to attach to your votes">
+    <p class="field-note">shows up in the tally next to your votes — leave blank to stay anonymous</p>
+    <button id="welcomeGo">start voting</button>
+    <span id="welcomeSite">made by <a href="https://bleepingweather.com/">bleepingweather.com</a></span>
   </div>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js"></script>
@@ -530,6 +588,26 @@ function renderVoter() {
 }
 document.getElementById('voterChip').onclick = () => voterName(true);
 
+// first-visit welcome: cold-link arrivals get the what/why + a name field.
+// returning voters (named, or already welcomed) never see it.
+const WELCOME_KEY = 'bw-curation-welcomed';
+function maybeWelcome() {
+  if (storage.getItem(WELCOME_KEY) || (storage.getItem(VOTER_KEY) || '').trim()) return;
+  document.getElementById('welcomeCount').textContent = phrases.length;
+  document.getElementById('welcome').hidden = false;
+  if (matchMedia('(min-width: 721px)').matches) document.getElementById('welcomeName').focus();
+}
+function dismissWelcome() {
+  const name = document.getElementById('welcomeName').value.trim();
+  if (name) storage.setItem(VOTER_KEY, name);
+  storage.setItem(WELCOME_KEY, '1');
+  try { sessionStorage.setItem(ASKED_KEY, '1'); } catch (e) {} // modal counts as the ask
+  document.getElementById('welcome').hidden = true;
+  renderVoter();
+  if (Object.keys(verdicts).length) scheduleSync();
+}
+document.getElementById('welcomeGo').onclick = dismissWelcome;
+
 function exportJSON(kind) {
   const voter = voterName(false);
   const slug = voter.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'anonymous';
@@ -568,6 +646,11 @@ function importVerdicts() {
 
 document.addEventListener('keydown', e => {
   if (e.metaKey || e.ctrlKey || e.repeat) return;
+  if (!document.getElementById('welcome').hidden) {
+    if (e.key === 'Enter' || e.key === 'Escape') dismissWelcome();
+    return; // never let rating hotkeys fire under the modal
+  }
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
   switch (e.key) {
     case '1': rate('slam'); break;
     case '2': rate('keep'); break;
@@ -595,6 +678,7 @@ idx = randomUnratedIdx(phrases) ?? Math.floor(Math.random() * phrases.length);
 
 renderVoter();
 render();
+maybeWelcome();
 </script>
 </body>
 </html>
