@@ -147,6 +147,44 @@
   }
   #help { text-align: center; font: 400 12.5px/1.7 var(--mono); color: var(--dim); margin-top: 12px; }
   #help b { color: var(--ink); }
+
+  /* native bucket picker — mobile only */
+  #bucketPick {
+    display: none;
+    font: 700 14px/1.2 var(--mono); color: var(--ink);
+    background: var(--paper); border: 1px solid var(--ink); border-radius: 0;
+    padding: 10px 12px; max-width: 52vw;
+  }
+
+  /* ——— mobile: the sidebar becomes a top bar, the page scrolls ——— */
+  @media (max-width: 720px) {
+    body { display: block; height: auto; overflow: auto; }
+    #sidebar {
+      width: auto; min-width: 0; padding: 12px 16px;
+      border-right: 0; border-bottom: 1px solid var(--line);
+      display: flex; align-items: center; gap: 14px;
+      overflow: visible;
+    }
+    .logomark { padding: 6px 7px 4px; }
+    .logo-grawlix { font-size: 9px; }
+    .logo-weather { font-size: 15px; }
+    .dept { display: none; }
+    .bucket, #buckets { display: none; }
+    #bucketPick { display: block; margin-left: auto; }
+    #main { padding: 18px 16px 48px; overflow: visible; }
+    #stage { gap: 16px; }
+    #widget { width: 100%; height: auto; min-height: 218px; aspect-ratio: 530 / 250; padding: 18px; }
+    #phrase { font-size: clamp(19px, 5.8vw, 26px); }
+    #temp { font-size: 34px; }
+    #icon { width: 48px; height: 48px; }
+    #meta { flex-wrap: wrap; gap: 8px; row-gap: 4px; }
+    #controls { width: 100%; }
+    #controls button { flex: 1 1 44%; padding: 14px 8px; font-size: 14px; min-height: 48px; }
+    #controls button kbd { display: none; }
+    #help kbd { display: none; }
+    #help { font-size: 12px; }
+    #footer { flex-wrap: wrap; }
+  }
 </style>
 </head>
 <body>
@@ -156,6 +194,7 @@
     <span class="logo-weather" aria-hidden="true">WEATHER</span>
   </a>
   <p class="dept"><span class="dot" aria-hidden="true"></span>phrase dept. / vote</p>
+  <select id="bucketPick" aria-label="Choose a bucket"></select>
   <div class="bucket" data-bucket="__all__">all buckets</div>
   <div id="buckets"></div>
 </div>
@@ -348,7 +387,25 @@ function renderBuckets() {
     'bucket' + (bucketFilter === '__all__' ? ' active' : '');
   document.querySelector('[data-bucket="__all__"]').onclick =
     () => { bucketFilter = '__all__'; visitHistory = []; idx = randomUnratedIdx(phrases) ?? 0; render(); };
+
+  // mobile mirror: native select with the same buckets + counts
+  const pick = document.getElementById('bucketPick');
+  const allRated = phrases.filter(p => verdicts[p.id]).length;
+  let opts = '<option value="__all__">all buckets (' + allRated + '/' + phrases.length + ')</option>';
+  for (const b of buckets) {
+    const items = phrases.filter(p => bucketKey(p) === b);
+    const rated = items.filter(p => verdicts[p.id]).length;
+    opts += '<option value="' + b + '">' + b + ' (' + rated + '/' + items.length + ')</option>';
+  }
+  pick.innerHTML = opts;
+  pick.value = bucketFilter;
 }
+document.getElementById('bucketPick').addEventListener('change', e => {
+  bucketFilter = e.target.value;
+  visitHistory = [];
+  idx = bucketFilter === '__all__' ? (randomUnratedIdx(phrases) ?? 0) : 0;
+  render();
+});
 
 let lastRate = 0;
 function rate(v) {
