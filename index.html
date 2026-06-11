@@ -2,47 +2,96 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Bleeping Weather — Phrase Curation</title>
+<title>Bleeping Weather — phrase dept. / vote</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@700;900&family=Inconsolata:wght@400;700&family=Anton&family=Bungee&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0f1115; --panel: #181b22; --panel2: #1f232c; --text: #e8e6e0;
-    --dim: #8a8f9c; --accent: #ffb454; --slam: #ffd700; --keep: #5dd39e;
-    --cut: #e05c5c; --skip: #c8a24b; --border: #2a2f3a;
+    --paper: oklch(97.6% 0.002 95);
+    --ink:   oklch(22% 0.012 280);
+    --soft:  oklch(42% 0.01 280);
+    --dim:   oklch(56% 0.008 280);
+    --line:  oklch(87% 0.004 95);
+    /* fixed brand sky-blue — no live weather on this page. clamped for
+       paper text/fills; raw only on dark surfaces (the slab, the widget). */
+    --accent-raw: #61afef;
+    --accent: oklch(from var(--accent-raw) min(l, 0.52) c h);
+    /* verdict colors, lightness-clamped the same way so they hold on paper */
+    --slam: oklch(from #ffd700 min(l, 0.58) c h);
+    --keep: oklch(from #5dd39e min(l, 0.52) c h);
+    --cut:  oklch(from #e05c5c min(l, 0.52) c h);
+    --skip: oklch(from #c8a24b min(l, 0.52) c h);
+    --disp: "Titillium Web", "Helvetica Neue", sans-serif;
+    --mono: "Inconsolata", "Menlo", monospace;
     --widget-font: ui-rounded, "SF Pro Rounded", -apple-system, "Helvetica Neue", sans-serif;
   }
   * { box-sizing: border-box; }
   body {
-    margin: 0; background: var(--bg); color: var(--text);
-    font: 15px/1.5 -apple-system, "Helvetica Neue", sans-serif;
+    margin: 0; background: var(--paper); color: var(--ink);
+    font: 400 15px/1.5 var(--mono);
     display: flex; height: 100vh; overflow: hidden;
+    -webkit-font-smoothing: antialiased;
   }
+  ::selection { background: var(--accent); color: var(--paper); }
+
+  /* ——— sidebar: compact slab logomark + mono bucket list ——— */
   #sidebar {
-    width: 240px; min-width: 240px; background: var(--panel); padding: 12px;
-    overflow-y: auto; border-right: 1px solid var(--border);
+    width: 252px; min-width: 252px; padding: 22px 16px;
+    overflow-y: auto; border-right: 1px solid var(--line);
   }
-  #sidebar h1 { font-size: 15px; margin: 4px 0 12px; color: var(--accent); }
+  .logomark {
+    display: inline-block; background: var(--ink);
+    padding: 8px 9px 6px; line-height: 1; text-decoration: none;
+  }
+  .logo-grawlix {
+    display: block; text-align: center; margin-bottom: 3px;
+    font: 400 11px/1 "Bungee", var(--mono); letter-spacing: .05em;
+    color: var(--accent-raw);
+  }
+  .logo-weather {
+    display: block;
+    font: 400 19px/.95 "Anton", var(--disp); letter-spacing: .05em;
+    color: var(--paper);
+  }
+  .dept {
+    margin: 12px 0 0; font: 700 12px/1.5 var(--mono);
+    letter-spacing: .07em; color: var(--soft);
+  }
+  .dot { display: inline-block; width: 9px; height: 9px; background: var(--accent); }
+  .dept .dot { margin-right: 8px; }
   .bucket {
-    display: flex; justify-content: space-between; padding: 5px 8px;
-    border-radius: 6px; cursor: pointer; font-size: 13px; color: var(--dim);
+    display: flex; justify-content: space-between; gap: 8px;
+    padding: 6px 9px; cursor: pointer;
+    font: 400 13px/1.5 var(--mono); color: var(--soft);
+    border-top: 1px solid var(--line);
   }
-  .bucket:hover { background: var(--panel2); }
-  .bucket.active { background: var(--panel2); color: var(--text); }
-  .bucket .done { color: var(--keep); }
-  #main { flex: 1; display: flex; flex-direction: column; padding: 20px 24px; overflow-y: auto; }
-  #progress { font-size: 13px; color: var(--dim); margin-bottom: 10px; }
-  #progress b { color: var(--text); }
-  #stage { margin: auto 0; display: flex; flex-direction: column; align-items: center; gap: 16px; }
-  #meta { font-size: 12px; color: var(--dim); display: flex; gap: 14px; }
+  .bucket[data-bucket="__all__"] { margin-top: 22px; }
+  #buckets .bucket:last-child { border-bottom: 1px solid var(--line); }
+  .bucket:hover { color: var(--ink); }
+  .bucket.active { background: var(--ink); color: var(--paper); font-weight: 700; }
+  .bucket .done { color: var(--keep); font-weight: 700; }
+  .bucket.active .done { color: var(--paper); }
+
+  #main { flex: 1; display: flex; flex-direction: column; padding: 22px 28px; overflow-y: auto; }
+  #progress { font: 700 12px/1.6 var(--mono); letter-spacing: .05em; color: var(--soft); margin-bottom: 10px; }
+  #progress b { color: var(--ink); }
+  #stage { margin: auto 0; display: flex; flex-direction: column; align-items: center; gap: 18px; }
+  #meta {
+    display: flex; align-items: center; gap: 14px;
+    font: 700 12px/1.6 var(--mono); letter-spacing: .07em; color: var(--soft);
+  }
   #verdictTag { font-weight: 700; }
 
-  /* ——— widget replica (iOS medium widget) ——— */
+  /* ——— widget replica (iOS medium widget) — the one dark object on the
+         page; it depicts the app, which lives on wallpapers, not paper ——— */
   #widget {
     position: relative; width: 530px; height: 250px; border-radius: 32px;
     overflow: hidden; padding: 25px;
     display: flex; flex-direction: column; justify-content: space-between;
     background: linear-gradient(135deg, #0c0c14, #111122);
-    box-shadow: 0 18px 50px rgba(0,0,0,0.55);
+    box-shadow: 0 18px 44px oklch(20% 0.01 280 / 0.22);
     outline: 2px solid transparent; outline-offset: 3px;
     font-family: var(--widget-font);
   }
@@ -67,33 +116,54 @@
   #phrase .kw { /* keyword accent applied inline */ }
   #subtext { font-size: 17px; font-weight: 500; color: rgba(255,255,255,0.62); margin-top: 7px; }
 
+  /* specimen framing: hairline + fig-tag, like the landing page's mocks */
+  .fig-cap {
+    width: 530px; margin: 14px auto 0; padding-top: 9px;
+    border-top: 1px solid var(--line);
+    font: 400 12.5px/1.6 var(--mono); color: var(--dim);
+  }
+  .fig-cap .fig-tag { font-weight: 700; letter-spacing: .07em; color: var(--soft); margin-right: 10px; }
+
   #controls { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
   button {
-    background: var(--panel2); color: var(--text); border: 1px solid var(--border);
-    border-radius: 8px; padding: 8px 16px; font-size: 14px; cursor: pointer;
+    font: 700 13px/1 var(--mono); letter-spacing: .03em;
+    padding: 11px 16px 10px;
+    background: transparent; color: var(--ink);
+    border: 1px solid var(--ink); border-radius: 0; cursor: pointer;
+    transition: background-color .15s ease, color .15s ease, transform .1s ease;
   }
-  button:hover { border-color: var(--dim); }
-  button.slam { color: var(--slam); } button.keep { color: var(--keep); }
-  button.cut { color: var(--cut); } button.skip { color: var(--skip); }
+  button.slam { color: var(--slam); }
+  button.keep { color: var(--keep); }
+  button.cut  { color: var(--cut); }
+  button.skip { color: var(--skip); }
+  button:hover { background: var(--ink); color: var(--paper); }
+  button:active { transform: translateY(2px); }
   #footer { margin-top: 14px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
-  #footer button { font-size: 13px; padding: 6px 12px; }
+  #footer button { font-size: 12px; padding: 8px 12px 7px; }
   kbd {
-    background: var(--bg); border: 1px solid var(--border); border-radius: 4px;
-    padding: 0 5px; font-size: 11px; color: var(--dim);
+    font: 400 11px/1 var(--mono);
+    border: 1px solid currentColor; border-radius: 0;
+    padding: 1px 5px; opacity: .55;
   }
-  #help { text-align: center; font-size: 12px; color: var(--dim); margin-top: 10px; }
+  #help { text-align: center; font: 400 12.5px/1.7 var(--mono); color: var(--dim); margin-top: 12px; }
+  #help b { color: var(--ink); }
 </style>
 </head>
 <body>
 <div id="sidebar">
-  <h1>☂ Phrase Curation</h1>
-  <div class="bucket" data-bucket="__all__">All buckets</div>
+  <a class="logomark" href="https://bleepingweather.com/" aria-label="Bleeping Weather">
+    <span class="logo-grawlix" aria-hidden="true">#$@%&amp;!</span>
+    <span class="logo-weather" aria-hidden="true">WEATHER</span>
+  </a>
+  <p class="dept"><span class="dot" aria-hidden="true"></span>phrase dept. / vote</p>
+  <div class="bucket" data-bucket="__all__">all buckets</div>
   <div id="buckets"></div>
 </div>
 <div id="main">
   <div id="progress"></div>
   <div id="stage">
     <div id="meta">
+      <span class="dot" aria-hidden="true"></span>
       <span id="badges"></span>
       <span id="verdictTag"></span>
       <span id="cleanFlag"></span>
@@ -110,12 +180,13 @@
         <div id="subtext"></div>
       </div>
     </div>
+    <p class="fig-cap"><span class="fig-tag">fig. 01 / ios medium widget</span>dark by design — it ships on wallpapers, not paper.</p>
     <div id="controls">
-      <button class="slam" onclick="rate('slam')">🏆 Grand slam <kbd>1</kbd></button>
-      <button class="keep" onclick="rate('keep')">✓ Keep <kbd>2</kbd></button>
-      <button class="cut" onclick="rate('cut')">✗ Cut <kbd>3</kbd></button>
-      <button class="skip" onclick="rate('skip')">⏭ Skip <kbd>4</kbd></button>
-      <button onclick="rate(null)">Clear <kbd>u</kbd></button>
+      <button class="slam" onclick="rate('slam')">grand slam <kbd>1</kbd></button>
+      <button class="keep" onclick="rate('keep')">keep <kbd>2</kbd></button>
+      <button class="cut" onclick="rate('cut')">cut <kbd>3</kbd></button>
+      <button class="skip" onclick="rate('skip')">skip <kbd>4</kbd></button>
+      <button onclick="rate(null)">clear <kbd>u</kbd></button>
     </div>
   </div>
   <div id="help">
@@ -248,7 +319,7 @@ function render() {
   document.getElementById('cleanFlag').style.color = 'var(--keep)';
   const tag = document.getElementById('verdictTag');
   tag.textContent =
-    v === 'slam' ? '🏆 GRAND SLAM' : v === 'keep' ? '✓ KEEP' : v === 'cut' ? '✗ CUT' : v === 'skip' ? '⏭ SKIPPED' : '';
+    v === 'slam' ? 'GRAND SLAM' : v === 'keep' ? 'KEEP' : v === 'cut' ? 'CUT' : v === 'skip' ? 'SKIPPED' : '';
   tag.style.color =
     v === 'slam' ? 'var(--slam)' : v === 'keep' ? 'var(--keep)' : v === 'cut' ? 'var(--cut)' : v === 'skip' ? 'var(--skip)' : '';
 
@@ -256,7 +327,7 @@ function render() {
   const rated = list.filter(q => verdicts[q.id]).length;
   document.getElementById('progress').innerHTML =
     '<b>' + (idx + 1) + '</b> / ' + list.length + ' — rated ' + rated +
-    ' (🏆 ' + count('slam') + ' · ✓ ' + count('keep') + ' · ✗ ' + count('cut') + ' · ⏭ ' + count('skip') + ')';
+    ' (slam ' + count('slam') + ' · keep ' + count('keep') + ' · cut ' + count('cut') + ' · skip ' + count('skip') + ')';
   renderBuckets();
 }
 
