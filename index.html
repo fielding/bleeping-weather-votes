@@ -116,14 +116,6 @@
   #phrase .kw { /* keyword accent applied inline */ }
   #subtext { font-size: 17px; font-weight: 500; color: rgba(255,255,255,0.62); margin-top: 7px; }
 
-  /* specimen framing: hairline + fig-tag, like the landing page's mocks */
-  .fig-cap {
-    width: 530px; margin: 14px auto 0; padding-top: 9px;
-    border-top: 1px solid var(--line);
-    font: 400 12.5px/1.6 var(--mono); color: var(--dim);
-  }
-  .fig-cap .fig-tag { font-weight: 700; letter-spacing: .07em; color: var(--soft); margin-right: 10px; }
-
   #controls { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
   button {
     font: 700 13px/1 var(--mono); letter-spacing: .03em;
@@ -207,7 +199,6 @@
     #main { padding: 18px 16px 48px; overflow: visible; }
     #stage { gap: 16px; }
     #widget { width: 100%; height: auto; min-height: 218px; aspect-ratio: 530 / 250; padding: 18px; }
-    .fig-cap { width: 100%; }
     #phrase { font-size: clamp(19px, 5.8vw, 26px); }
     #temp { font-size: 34px; }
     #icon { width: 48px; height: 48px; }
@@ -228,8 +219,8 @@
     <span class="logo-weather" aria-hidden="true">WEATHER</span>
   </a>
   <p class="dept"><span class="dot" aria-hidden="true"></span>phrase dept. / vote</p>
-  <select id="bucketPick" aria-label="Choose a bucket"></select>
-  <div class="bucket" data-bucket="__all__">all buckets</div>
+  <select id="bucketPick" aria-label="Choose a condition"></select>
+  <div class="bucket" data-bucket="__all__">all conditions</div>
   <div id="buckets"></div>
 </div>
 <div id="main">
@@ -253,7 +244,6 @@
         <div id="subtext"></div>
       </div>
     </div>
-    <p class="fig-cap"><span class="fig-tag">fig. 01 / ios medium widget</span>dark by design — it ships on wallpapers, not paper.</p>
     <div id="controls">
       <button class="slam" onclick="rate('slam')">grand slam</button>
       <button class="keep" onclick="rate('keep')">keep</button>
@@ -450,7 +440,7 @@ function renderBuckets() {
   // mobile mirror: native select with the same buckets + counts
   const pick = document.getElementById('bucketPick');
   const allRated = phrases.filter(p => verdicts[p.id]).length;
-  let opts = '<option value="__all__">all buckets (' + allRated + '/' + phrases.length + ')</option>';
+  let opts = '<option value="__all__">all conditions (' + allRated + '/' + phrases.length + ')</option>';
   for (const b of buckets) {
     const items = phrases.filter(p => bucketKey(p) === b);
     const rated = items.filter(p => verdicts[p.id]).length;
