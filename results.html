@@ -150,7 +150,7 @@ async function loadBallots() {
     }
     ballots = (await res.json()).ballots || [];
     document.getElementById('updated').textContent =
-      'updated ' + new Date().toLocaleTimeString() + ' — auto-refreshes every 60s';
+      'updated ' + new Date().toLocaleTimeString() + ' — refreshes every 5 min while open';
     render();
   } catch (e) {
     document.getElementById('updated').textContent = 'fetch failed: ' + e;
@@ -244,8 +244,22 @@ document.querySelectorAll('button.tab[data-tab]').forEach(b => b.onclick = () =>
 document.getElementById('q').addEventListener('input', render);
 document.getElementById('bucketSel').addEventListener('change', render);
 
+// GET /votes costs a KV list + one read per ballot, so a tight poll is
+// expensive: at 60s a left-open tab made ~1,440 list ops/day and blew past
+// KV's free-tier 1,000-list/day cap. Only poll when the tab is actually
+// visible, at 5 min, and refresh on re-focus so it still feels live.
+const REFRESH_MS = 5 * 60 * 1000;
+let lastLoad = 0;
+function maybeLoad() {
+  if (document.hidden) return;
+  if (Date.now() - lastLoad < REFRESH_MS) return;
+  lastLoad = Date.now();
+  loadBallots();
+}
+lastLoad = Date.now();
 loadBallots();
-setInterval(loadBallots, 60_000);
+setInterval(maybeLoad, 60_000);              // checks the clock; only fetches every 5 min
+document.addEventListener('visibilitychange', maybeLoad);  // catch up when you switch back
 </script>
 </body>
 </html>
