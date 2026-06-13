@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Bleeping Weather — phrase standings</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Live standings from the Bleeping Weather phrase vote. See what's winning, then add your own.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@700;900&family=Inconsolata:wght@400;700&family=Anton&family=Bungee&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: oklch(97.6% 0.002 95);
+    --ink:   oklch(22% 0.012 280);
+    --soft:  oklch(42% 0.01 280);
+    --dim:   oklch(56% 0.008 280);
+    --line:  oklch(87% 0.004 95);
+    --accent-raw: #61afef;
+    --accent: oklch(from var(--accent-raw) min(l, 0.52) c h);
+    --slam: oklch(from #ffd700 min(l, 0.58) c h);
+    --keep: oklch(from #5dd39e min(l, 0.52) c h);
+    --cut:  oklch(from #e05c5c min(l, 0.52) c h);
+    --skip: oklch(from #c8a24b min(l, 0.52) c h);
+    --disp: "Titillium Web", "Helvetica Neue", sans-serif;
+    --mono: "Inconsolata", "Menlo", monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink);
+         font: 400 15px/1.5 var(--mono); -webkit-font-smoothing: antialiased; }
+  ::selection { background: var(--accent); color: var(--paper); }
+  #wrap { max-width: 920px; margin: 0 auto; padding: 32px 24px 80px; }
+  .brand { display: flex; align-items: flex-end; gap: 16px; margin-bottom: 14px; }
+  .logomark { display: inline-block; background: var(--ink); padding: 8px 9px 6px; line-height: 1; text-decoration: none; }
+  .logo-grawlix { display: block; text-align: center; margin-bottom: 3px;
+    font: 400 11px/1 "Bungee", var(--mono); letter-spacing: .05em; color: var(--accent-raw); }
+  .logo-weather { display: block; font: 400 19px/.95 "Anton", var(--disp); letter-spacing: .05em; color: var(--paper); }
+  .dot { display: inline-block; width: 9px; height: 9px; background: var(--accent); margin-right: 8px; }
+  .dept { margin: 0; font: 700 12px/1.5 var(--mono); letter-spacing: .07em; color: var(--soft); }
+  #updated { font: 400 12px/1.6 var(--mono); color: var(--dim); margin-top: 2px; }
+  .lede { font: 400 14px/1.6 var(--mono); color: var(--soft); margin: 0 0 22px; }
+  .lede a { color: var(--accent); font-weight: 700; text-decoration: none; border-bottom: 2px solid var(--accent); }
+  .lede a:hover { background: var(--accent); color: var(--paper); }
+  #cards { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 22px; }
+  .card { border: 1px solid var(--line); padding: 12px 18px 10px; min-width: 110px; }
+  .card .num { font: 900 26px/1.15 var(--disp); letter-spacing: -0.01em; }
+  .card .lbl { font: 700 11px/1.6 var(--mono); letter-spacing: .07em; color: var(--dim); }
+  #controls { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+  select, input[type=search], button.tab {
+    font: 700 13px/1 var(--mono); letter-spacing: .03em; background: transparent; color: var(--ink);
+    border: 1px solid var(--ink); border-radius: 0; padding: 9px 13px 8px; }
+  input[type=search] { font-weight: 400; }
+  button.tab { cursor: pointer; transition: background-color .15s ease, color .15s ease; }
+  button.tab:hover, button.tab.active { background: var(--ink); color: var(--paper); }
+  .row { border: 1px solid var(--line); padding: 12px 16px; margin-bottom: 8px; }
+  .row .top { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; font: 700 12px/1.6 var(--mono); }
+  .rank { font-weight: 900; color: var(--dim); min-width: 30px; font-family: var(--disp); font-size: 15px; }
+  .score { font-weight: 700; min-width: 52px; }
+  .pills { color: var(--dim); }
+  .bucket-tag { font: 700 11px/1.6 var(--mono); letter-spacing: .05em; padding: 0 7px; border: 1px solid var(--line); }
+  .phrase { font: 900 17px/1.3 var(--disp); letter-spacing: -0.01em; margin-top: 5px; }
+  .sub { font: 400 13px/1.5 var(--mono); color: var(--soft); }
+  #empty { color: var(--dim); padding: 40px 0; text-align: center; }
+  @media (max-width: 560px) { .lede br { display: none; } .card { min-width: 88px; flex: 1 1 28%; } }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <header class="brand">
+    <a class="logomark" href="https://bleepingweather.com/" aria-label="Bleeping Weather">
+      <span class="logo-grawlix" aria-hidden="true">#$@%&amp;!</span>
+      <span class="logo-weather" aria-hidden="true">WEATHER</span>
+    </a>
+    <div>
+      <p class="dept"><span class="dot" aria-hidden="true"></span>phrase dept. / standings</p>
+      <div id="updated"></div>
+    </div>
+  </header>
+  <p class="lede">What's winning the phrase vote, ranked by the crowd.
+     <a href="https://vote.bleepingweather.com/">Cast your votes &rarr;</a></p>
+  <div id="cards"></div>
+  <div id="controls">
+    <button class="tab active" data-tab="all">everything</button>
+    <button class="tab" data-tab="slams">grand slams</button>
+    <button class="tab" data-tab="contested">contested</button>
+    <button class="tab" data-tab="cuts">clear cuts</button>
+    <select id="bucketSel"><option value="">all conditions</option></select>
+    <input type="search" id="q" placeholder="search text…">
+  </div>
+  <div id="rows"></div>
+  <div id="empty" style="display:none">No votes yet — be the first.</div>
+</div>
+<script>
+const SYNC_URL = 'https://bleeping-weather-votes.fielding-630.workers.dev';
+const ACCENT = {
+  hot: '#ff5f56', cold: '#61afef', rain: '#56b6c2', snow: '#abb2bf',
+  wind: '#c678dd', humid: '#e5c07b', fog: '#8a93a3', storm: '#e06c75',
+  perfect: '#98c379', freezing_rain: '#56b6c2', hail: '#e06c75',
+  overcast: '#8a93a3', smoke_haze: '#d19a66',
+};
+const clampAccent = c => 'oklch(from ' + c + ' min(l, 0.52) c h)';
+let data = { rows: [] }, tab = 'all';
+
+function esc(s) {
+  return String(s).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+}
+function ago(iso) {
+  const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
+  if (s < 90) return 'just now';
+  if (s < 5400) return Math.round(s / 60) + ' min ago';
+  if (s < 129600) return Math.round(s / 3600) + ' hr ago';
+  return Math.round(s / 86400) + ' days ago';
+}
+function section(r) {
+  if (r.score >= 1.5 && r.slam > 0) return 'slams';
+  if (r.contested) return 'contested';
+  if (r.score <= -1) return 'cuts';
+  return 'mid';
+}
+
+async function load() {
+  document.getElementById('updated').textContent = 'loading…';
+  try {
+    const res = await fetch(SYNC_URL + '/results');
+    data = await res.json();
+    render();
+  } catch (e) {
+    document.getElementById('updated').textContent = 'could not load standings — try refresh';
+  }
+}
+
+function render() {
+  const rows = data.rows || [];
+  document.getElementById('updated').textContent =
+    rows.length ? 'updated ' + ago(data.updated_at) : '';
+  const cards = [
+    [data.voters || 0, 'voters'],
+    [data.votes_cast || 0, 'votes cast'],
+    [data.phrases_rated || 0, 'phrases rated'],
+    [rows.filter(r => section(r) === 'slams').length, 'grand slams'],
+    [rows.filter(r => r.contested).length, 'contested'],
+  ];
+  document.getElementById('cards').innerHTML = cards.map(([n, l]) =>
+    '<div class="card"><div class="num">' + n + '</div><div class="lbl">' + l + '</div></div>').join('');
+
+  const sel = document.getElementById('bucketSel');
+  if (sel.options.length === 1) {
+    [...new Set(rows.map(r => r.condition + '/' + r.intensity))].sort()
+      .forEach(b => sel.add(new Option(b, b)));
+  }
+  const q = document.getElementById('q').value.toLowerCase();
+  const bucket = sel.value;
+  const shown = rows.filter(r =>
+    (tab === 'all' || section(r) === tab) &&
+    (!bucket || r.condition + '/' + r.intensity === bucket) &&
+    (!q || r.text.toLowerCase().includes(q) || (r.subtext || '').toLowerCase().includes(q)));
+
+  document.getElementById('rows').innerHTML = shown.map((r, i) => {
+    const accent = ACCENT[r.condition] || '#fff';
+    return '<div class="row"><div class="top">' +
+      '<span class="rank">#' + (i + 1) + '</span>' +
+      '<span class="score" style="color:' + (r.score >= 1 ? 'var(--keep)' : r.score <= -1 ? 'var(--cut)' : 'var(--dim)') + '">' +
+      (r.score >= 0 ? '+' : '') + r.score.toFixed(2) + '</span>' +
+      '<span class="pills">slam ' + r.slam + ' · keep ' + r.keep + ' · cut ' + r.cut + ' · skip ' + r.skip + ' · ' + r.n + ' voted</span>' +
+      '<span class="bucket-tag" style="color:' + clampAccent(accent) + '">' + r.condition + '/' + r.intensity + '</span>' +
+      (r.in_seed ? '' : '<span class="bucket-tag">candidate</span>') +
+      '</div><div class="phrase">' + esc(r.text) + '</div>' +
+      (r.subtext ? '<div class="sub">' + esc(r.subtext) + '</div>' : '') + '</div>';
+  }).join('');
+  document.getElementById('empty').style.display = rows.length ? 'none' : '';
+}
+
+document.querySelectorAll('button.tab[data-tab]').forEach(b => b.onclick = () => {
+  tab = b.dataset.tab;
+  document.querySelectorAll('button.tab[data-tab]').forEach(x => x.classList.toggle('active', x === b));
+  render();
+});
+document.getElementById('q').addEventListener('input', render);
+document.getElementById('bucketSel').addEventListener('change', render);
+
+load();
+// /results is edge-cached, so a re-fetch on refocus is cheap; no tight poll.
+document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
+</script>
+</body>
+</html>
